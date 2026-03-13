@@ -77,7 +77,7 @@ body{
 .progress-bar{
   height:100%;
   border-radius:8px;
-  transition:width 1.5s linear, background 0.5s linear;
+  transition:width 3s linear, background 3s linear;
 }
 
 .progress-value{
@@ -181,23 +181,18 @@ function updateBar(id,value,tfs){
   const bar=document.getElementById("bar_"+id);
   const text=document.getElementById("text_"+id);
   const label=document.getElementById("label_"+id);
+
   bar.style.width=value+"%";
   text.textContent=value+"%";
   label.textContent="Jackpot Meter: "+value+"%";
-  bar.style.background=value>=90?"red":value<=10?"green":"yellow";
+  bar.style.background=value.increasing?"green":"red";
 
   if(tfs){
-    document.getElementById("tf10_"+id).textContent=tfs.tf10+"%";
-    document.getElementById("tf10_"+id).className=tfs.tf10>=0?"green":"red";
-
-    document.getElementById("tf1h_"+id).textContent=tfs.tf60+"%";
-    document.getElementById("tf1h_"+id).className=tfs.tf60>=0?"green":"red";
-
-    document.getElementById("tf3h_"+id).textContent=tfs.tf180+"%";
-    document.getElementById("tf3h_"+id).className=tfs.tf180>=0?"green":"red";
-
-    document.getElementById("tf6h_"+id).textContent=tfs.tf360+"%";
-    document.getElementById("tf6h_"+id).className=tfs.tf360>=0?"green":"red";
+    ["10","1h","3h","6h"].forEach(tf=>{
+      const el=document.getElementById("tf"+tf+"_"+id);
+      el.textContent = tfs["tf"+tf].toFixed(2) + "%";
+      el.className = tfs["tf"+tf]>=0?"green":"red";
+    });
   }
 }
 
