@@ -16,6 +16,7 @@ body{
   padding-top:40px;
 }
 
+/* provider buttons */
 .provider-buttons{
   display:flex;
   gap:15px;
@@ -35,6 +36,7 @@ body{
   background:#00aa55;
 }
 
+/* provider groups */
 .provider-group{
   display:none;
   flex-direction:column;
@@ -45,9 +47,16 @@ body{
   display:flex;
 }
 
+/* meter layout */
 .meter-container{
+  width:600px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.meter-left{
   width:400px;
-  text-align:center;
 }
 
 .game-title{
@@ -82,29 +91,23 @@ body{
 
 .game-meter{
   font-size:18px;
-  margin-bottom:10px;
+  margin-bottom:5px;
 }
 
 .timeframes{
+  display:flex;
+  flex-direction:column;
   font-size:16px;
-  text-align:left;
-  width:160px;
-  margin:auto;
+  gap:3px;
 }
 
 .timeframes div{
   display:flex;
   justify-content:space-between;
-  margin:3px 0;
 }
 
-.green{
-  color:#00ff00;
-}
-
-.red{
-  color:#ff4040;
-}
+.green{ color:#00ff00; }
+.red{ color:#ff4040; }
 </style>
 </head>
 
@@ -119,12 +122,13 @@ body{
 <div id="provider_pg" class="provider-group"></div>
 
 <script>
+/* PROVIDER DATA */
 const providers={
   jili:["Boxing King","Golden Empire"],
   pg:["Wild Bounty Showdown","Wild Bandito"]
 };
 
-/* Show provider tab */
+/* SHOW PROVIDER TAB */
 function showProvider(name){
   document.querySelectorAll(".provider-group").forEach(g=>g.classList.remove("active"));
   document.getElementById("provider_"+name).classList.add("active");
@@ -132,17 +136,19 @@ function showProvider(name){
   document.getElementById("btn_"+name).classList.add("active");
 }
 
-/* Create game container */
+/* CREATE GAME UI */
 function createGame(title,id,provider){
   const container=document.createElement("div");
   container.className="meter-container";
   container.innerHTML=`
-    <div class="game-title">${title}</div>
-    <div class="progress-bar-wrap">
-      <div class="progress-bar" id="bar_${id}"></div>
-      <div class="progress-value" id="text_${id}"></div>
+    <div class="meter-left">
+      <div class="game-title">${title}</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar" id="bar_${id}"></div>
+        <div class="progress-value" id="text_${id}"></div>
+      </div>
+      <div class="game-meter" id="label_${id}"></div>
     </div>
-    <div class="game-meter" id="label_${id}"></div>
     <div class="timeframes">
       <div><span>10min:</span> <span id="tf10_${id}"></span></div>
       <div><span>1 Hr:</span> <span id="tf1h_${id}"></span></div>
@@ -151,75 +157,53 @@ function createGame(title,id,provider){
     </div>
   `;
   document.getElementById("provider_"+provider).appendChild(container);
-  createTimeframes(id);
 }
 
-/* Create timeframe logic */
-function createTimeframe(id,max,minStep,maxStep){
-  let value=Math.random()*max;
-  let increasing=Math.random()<0.5;
-  const el=document.getElementById(id);
-
-  function update(){
-    let step=Math.random()*(maxStep-minStep)+minStep;
-    if(increasing){
-      value+=step;
-      if(value>=max){ value=max; increasing=false; }
-      el.textContent=value.toFixed(2)+"%";
-      el.className="green";
-    }else{
-      value-=step;
-      if(value<=0){ value=0; increasing=true; }
-      el.textContent="-"+value.toFixed(2)+"%";
-      el.className="red";
-    }
-    setTimeout(update,300);
-  }
-  update();
-}
-
-function createTimeframes(id){
-  createTimeframe("tf10_"+id,5,0.01,0.09);
-  createTimeframe("tf1h_"+id,30,0.04,0.34);
-  createTimeframe("tf3h_"+id,68,0.06,0.36);
-  createTimeframe("tf6h_"+id,77,0.11,1.21);
-}
-
-/* Initialize games */
+/* INITIALIZE ALL GAMES */
 providers.jili.forEach((game,i)=>createGame(game,"jili"+i,"jili"));
 providers.pg.forEach((game,i)=>createGame(game,"pg"+i,"pg"));
 
-/* Default tab */
-showProvider("jili");
-
-/* Update meters from server function */
-async function updateMeterFromServer(id, gameName){
+/* FETCH METERS FROM SERVER */
+async function updateMeters(){
   try{
-    const res=await fetch("/.netlify/functions/meters");
-    const data=await res.json();
-    const bar=document.getElementById("bar_"+id);
-    const text=document.getElementById("text_"+id);
-    const label=document.getElementById("label_"+id);
-    let value=parseFloat(data[gameName]);
-    // slight random fluctuation to make it dynamic
-    let step=(Math.random()*0.75+0.05)*(Math.random()<0.5?1:-1);
-    value=Math.min(90, Math.max(10, value+step));
-    bar.style.width=value+"%";
-    bar.style.background=value>=90?"red":value<=10?"green":"lime";
-    text.textContent=value.toFixed(2)+"%";
-    label.textContent="Jackpot Meter: "+value.toFixed(2)+"%";
+    const res = await fetch("/.netlify/functions/meters");
+    const data = await res.json();
+
+    updateBar("jili0", data.boxingKing, data.timeframes.boxingKing);
+    updateBar("jili1", data.goldenEmpire, data.timeframes.goldenEmpire);
   }catch(e){
-    console.log("Error fetching meters",e);
+    console.log("API error",e);
   }
 }
 
-/* Polling loop */
-setInterval(()=>{
-  updateMeterFromServer("jili0","boxingKing");
-  updateMeterFromServer("jili1","goldenEmpire");
-},2500);
-updateMeterFromServer("jili0","boxingKing");
-updateMeterFromServer("jili1","goldenEmpire");
+/* UPDATE BAR AND TIMEFRAMES */
+function updateBar(id,value,tfs){
+  const bar=document.getElementById("bar_"+id);
+  const text=document.getElementById("text_"+id);
+  const label=document.getElementById("label_"+id);
+  bar.style.width=value+"%";
+  text.textContent=value+"%";
+  label.textContent="Jackpot Meter: "+value+"%";
+  bar.style.background=value>=90?"red":value<=10?"green":"yellow";
+
+  if(tfs){
+    document.getElementById("tf10_"+id).textContent=tfs.tf10+"%";
+    document.getElementById("tf10_"+id).className=tfs.tf10>=0?"green":"red";
+
+    document.getElementById("tf1h_"+id).textContent=tfs.tf60+"%";
+    document.getElementById("tf1h_"+id).className=tfs.tf60>=0?"green":"red";
+
+    document.getElementById("tf3h_"+id).textContent=tfs.tf180+"%";
+    document.getElementById("tf3h_"+id).className=tfs.tf180>=0?"green":"red";
+
+    document.getElementById("tf6h_"+id).textContent=tfs.tf360+"%";
+    document.getElementById("tf6h_"+id).className=tfs.tf360>=0?"green":"red";
+  }
+}
+
+setInterval(updateMeters,3000);
+updateMeters();
+showProvider("jili");
 </script>
 
 </body>
